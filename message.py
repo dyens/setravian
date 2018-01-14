@@ -1,0 +1,6 @@
+to = ['k11', 'detroit', 'Владимир 1983', 'Degs', 'walerra', 'дьявол', 'Spook', 'kykis', 'Press77', 'Korfik', 'capaton', 'manah', 'jak41', 'Ken_Cooper', 'demonsim777', 'zloj', 'OrbiT26', 'qwer', 'Skazochnik', 'Блын', 'voin', 'Kyn2', 'grozni', 'dyatel', 'НаТТа', 'HASKI', 'Davu', 'xRx', 'alins59', 'ruslan-1561067', 'Demyan', 'Pushcin', 'Механик', 'FCDD', 'Nikatin', 'Alternativa', 'Vangog', 'рыбак', 'Монгол', 'keramik', 'vovann2009', 'tik', 'verezhnikov', 'M1nt_L', 'Головолиз', '3oloto', 'Raachanubis', 'gkp', 'Квентин', 'Михаил Морковка', 'Tovchma', 'BIG-STAN', 'Ликвидация', 'KutuzovSR', 'Kid', 'Шизік', 'Andr022', 'lemmi', 'насевер', 'DeeJay', 'Moonlite', 'BryToro', 'Rudzin', 'OneCoin', 'поп-2', 'Газик', 'managa_oleg', 'Mihailw', 'SlionMR', 'Ahmedula', 'polariuss', 'Сеж', 'Nezhik', 'AlexandeR20611', 'Serg64', 'TRALL', 'gas', 'александриус', 'kamin', 'ччч', '6apppa6axa', 'SEM', 'колян 07', 'Rolfringer', 'Makar', 'Vitalik2382', 'beka', 'dimasik', 'vovan', 'Raeda', 'Vovchik', 'Joi', 'Misha420', 'bruder', 'чупка', 'Sagitta', 'санче', 'бако', 'Frankenstein', 'Артур', 'IVV', 'XAH', 'iskra', 'Ebrulius', 'Morf', 'But', 'Don', 'vitez', 'Zhurilo', 'efimm', 'shmidt', 'Drovosek', 'АУТ', 'Данаец', 'Саниныч', 'nico', 'Paulsen', 'хапуга', 'spsq', 'Vose']
+head = 'Регистрация в ГТ'
+
+body = '''
+Зарегистрируйтесь в ГТ.
+'''

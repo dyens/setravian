@@ -32,8 +32,12 @@ jobs ={
     'ANALYSE': player.Player.analyse,
     'BUILD_MINE': player.Player.build_mine,
     'ATACK': player.Player.atack,
+    'TRADE': player.Player.trade,
+    'READ_MESSAGES': player.Player.read_messages,
 }
 '''
+
+
 reload_command = '''
 global controller
 global C
@@ -43,6 +47,7 @@ global stop
 global player
 global db
 global data
+global utils
 
 reload(loader)
 reload(timer)
@@ -51,6 +56,7 @@ reload(stop)
 reload(player)
 reload(db)
 reload(data)
+reload(utils)
 %s
 controller=C.Controller(driver, jobs)
 ''' % jobs
@@ -64,6 +70,7 @@ global stop
 global player
 global db
 global data
+global utils
 
 queue_back = [i for i in controller.queue._queue]
 
@@ -74,10 +81,27 @@ reload(stop)
 reload(player)
 reload(db)
 reload(data)
+reload(utils)
 %s
 controller=C.Controller(driver, jobs)
 controller.queue._queue = queue_back
 ''' % jobs 
+
+
+update_world = '''
+from db import WorldVillage
+WorldVillage.update_world()
+'''
+
+block_all_farm = '''
+from db import FarmVillage
+FarmVillage.block_all()
+'''
+
+unblock_farm = '''
+from db import FarmVillage
+FarmVillage.get_village({params}).unblock()
+'''
 
 
 
@@ -86,16 +110,75 @@ from db import FarmVillage
 FarmVillage.add_to_list({params})
 '''
 
+search_farm = '''
+from db import WorldVillage
+for_farm = WorldVillage.get_farm({params})
+for village in for_farm:
+    print(village.x, village.y, village.village_name, village.population_now.population, village.population_dynamic())
+'''
+
+scout_farm = '''
+from db import FarmVillage
+for village in FarmVillage.get_all():
+    village.need_scout()
+'''
+
+def_my_allys = '''
+driver.get(player.Player.PAGES['RESOURCES'])
+player.Player.go_to_village(driver, 'dyens', player.Player.get_data(driver))
+from utils import get_friends
+
+class FVO(object):
+
+    _army = {'преторианец':1}
+    def army(self):
+        return self._army
+
+    def block(self):
+        pass
+
+    def update_last_atack(self):
+        pass
+
+    def delete(self):
+        pass
+
+    def __init__(self, friend):
+        self.x = friend.x
+        self.y = friend.y
+        self.id = '(%s, %s)' % (self.x, self.y)
+
+progress = 0
+friends = get_friends()
+total_progress = len(friends)
+
+last = True
+for friend in friends:
+    progress += 1
+    print("Progress: %s from %s" % (progress, total_progress))
+    if friend.x == -120 and friend.y == -29:
+        last = False
+    if last is True:
+        continue
+    fvo = FVO(friend)
+    player.Player.atack(driver, [], **{'atack_type': 'HELP', 'farm_village': fvo})
+'''
 
 class Client(object):
 
     commands = {
         'reload': reload_command,
         'save_reload': save_reload_command,
+        'update_world': update_world,
+        'block_all_farm': block_all_farm,
+        'scout_farm': scout_farm,
+        'def_my_allys': def_my_allys,
     }
 
     commands_with_args = {
         'add_farm': add_farm,
+        'search_farm': search_farm,
+        'unblock_farm': unblock_farm,
     }
 
     def __init__(self):

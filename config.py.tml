@@ -1,0 +1,22 @@
+from datetime import timedelta
+import os
+
+GECKO_PATH = "path to gecko"
+SOCKET_PORT = 9090
+LOGIN = 'login'
+PASSWORD = 'pass'
+HREF = 'http://ts29.travian.ru'
+ANALYSE_DELTA = timedelta(minutes=2)
+
+ID_APP = 'appid'
+USER_ID = 'userid'
+LOGIN_VK = 'loginvk'
+PASSWORD_VK = 'passvk'
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'travian.db2')
+SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
+
+CHECK_TRADE_PERIOD = timedelta(minutes=20)
+
+ALLY_AIDS = [159, 109, 197, 46]

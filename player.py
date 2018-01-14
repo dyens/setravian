@@ -1,6 +1,8 @@
+from config import HREF
 import logging
 from itertools import cycle
 from datetime import timedelta
+from datetime import datetime
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,6 +14,8 @@ from functools import cmp_to_key
 from db import Param
 from db import Building
 from db import FarmVillage
+from db import TradeRoute
+from db import Message
 from data import mine_names
 from data import hero_unit
 from data import rome_units
@@ -20,6 +24,7 @@ from data import gaul_units
 from data import nature_units
 from data import natar_units
 from data import units
+from utils import get_help
 
 
 
@@ -30,16 +35,19 @@ class Player(object):
     @staticmethod
     def _to_int(value):
         numbers = [str(i) for i in range(10)]
+        valid_symbols = []
+        valid_symbols.extend(numbers)
+        valid_symbols.append('-')
         if isinstance(value, int):
             return value
         elif isinstance(value, str):
             symbol_list = []
             for symbol in value:
-                if symbol in numbers:
+                if symbol in valid_symbols:
                     symbol_list.append(symbol)
             return int(''.join(symbol_list))
         else:
-            raise ValueError('Wrong type of value.')
+            raise ValueError('Wrong type of value: %s' % value)
 
 
 
@@ -105,17 +113,34 @@ class Player(object):
 
         try:
             quests = driver.find_element_by_xpath("//div[@id='sidebarBoxHero']/div/div/button/div/div[@class='speechBubbleContent']")
-            quests = quests.text
+            quests = Player._to_int(quests.text)
         except NoSuchElementException:
-            quests = '0'
+            quests = 0
 
 
         try:
             reports = driver.find_element_by_xpath("//li[@id='n5']/div/div[@class='speechBubbleContent']")
-            reports = reports.text
+            reports = Player._to_int(reports.text)
         except NoSuchElementException:
-            reports = '0'
+            reports = 0
 
+        try:
+            messages = driver.find_element_by_xpath("//li[@id='n6']/div/div[@class='speechBubbleContent']")
+            messages = Player._to_int(messages.text)
+        except NoSuchElementException:
+            messages = 0
+
+        try:
+            server_time = driver.find_element_by_xpath("//div[@id='servertime']/span")
+            h, m, s = server_time.text.split(':')
+            h = Player._to_int(h)
+            m = Player._to_int(m)
+            s = Player._to_int(s)
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+            server_time = datetime(year, month, day, h, m, s)
+        except NoSuchElementException:
+            server_time = None
 
         builds = []
         build_elements = driver.find_elements_by_xpath("//div[@class='boxes buildingList']/div/ul/li")
@@ -164,58 +189,59 @@ class Player(object):
         #TODO: отчеты
 
         moves = {'in': [], 'out': []}
-        try:
-            moves_table = driver.find_element_by_xpath("//table[@id='movements']/tbody")
-            table_text = moves_table.text
-            tokens = table_text.split('\n')
-
-            in_army = False
-            moves_type = None
-            moves_number = None
-            for token in tokens:
-                if 'Исходящие' in token:
-                    in_army = False
-                    continue
-                elif 'Приходящие' in token:
-                    in_army = True
-                else:
-                    if 'Нап' in token:
-                        # Нападение
-                        moves_type = 'Нап'
-                        moves_number = token.split(' ')[0]
-                    elif 'Прик' in token:
-                        # Приключение
-                        moves_type = 'Прик'
-                        moves_number = token.split(' ')[0]
-                    elif 'Под' in token:
-                        # Подкрепление
-                        moves_type = 'Под'
-                        moves_number = token.split(' ')[0]
-                    elif 'Пос' in token:
-                        # Поселенцы
-                        moves_type = 'Пос'
-                        moves_number = token.split(' ')[0]
-                    else:
-                        d_h, d_m, d_s = token.split(' ')[0].split(':')
-                        d_h = Player._to_int(d_h)
-                        d_m = Player._to_int(d_m)
-                        d_s = Player._to_int(d_s)
-                        duration = timedelta(hours=d_h, minutes=d_m, seconds=d_s)
-                        if in_army is True:
-                            moves['in'].append({
-                                'type': moves_type,
-                                'number': moves_number,
-                                'duration': duration
-                            })
-                        else:
-                            moves['out'].append({
-                                'type': moves_type,
-                                'number': moves_number,
-                                'duration': duration
-                            })
-
-        except NoSuchElementException:
-            pass
+# TODO
+#        try:
+#            moves_table = driver.find_element_by_xpath("//table[@id='movements']/tbody")
+#            table_text = moves_table.text
+#            tokens = table_text.split('\n')
+#
+#            in_army = False
+#            moves_type = None
+#            moves_number = None
+#            for token in tokens:
+#                if 'Исходящие' in token:
+#                    in_army = False
+#                    continue
+#                elif 'Приходящие' in token:
+#                    in_army = True
+#                else:
+#                    if 'Нап' in token:
+#                        # Нападение
+#                        moves_type = 'Нап'
+#                        moves_number = token.split(' ')[0]
+#                    elif 'Прик' in token:
+#                        # Приключение
+#                        moves_type = 'Прик'
+#                        moves_number = token.split(' ')[0]
+#                    elif 'Под' in token:
+#                        # Подкрепление
+#                        moves_type = 'Под'
+#                        moves_number = token.split(' ')[0]
+#                    elif 'Пос' in token:
+#                        # Поселенцы
+#                        moves_type = 'Пос'
+#                        moves_number = token.split(' ')[0]
+#                    else:
+#                        d_h, d_m, d_s = token.split(' ')[0].split(':')
+#                        d_h = Player._to_int(d_h)
+#                        d_m = Player._to_int(d_m)
+#                        d_s = Player._to_int(d_s)
+#                        duration = timedelta(hours=d_h, minutes=d_m, seconds=d_s)
+#                        if in_army is True:
+#                            moves['in'].append({
+#                                'type': moves_type,
+#                                'number': moves_number,
+#                                'duration': duration
+#                            })
+#                        else:
+#                            moves['out'].append({
+#                                'type': moves_type,
+#                                'number': moves_number,
+#                                'duration': duration
+#                            })
+#
+#        except NoSuchElementException:
+#            pass
 
         href_villages = driver.find_elements_by_xpath("//div[@id='sidebarBoxVillagelist']/div/div/ul/li/a")
         name_villages = driver.find_elements_by_xpath("//div[@id='sidebarBoxVillagelist']/div/div/ul/li/a/div")
@@ -245,15 +271,18 @@ class Player(object):
             'active_village': active_village,
             'mines': mines,
             'moves': moves,
-            'villages': villages
+            'villages': villages,
+            'messages': messages,
+            'server_time': server_time,
         }
 
-        #print(data)
+        print(data)
         return data
 
     PAGES = {
-        'RESOURCES': 'http://ts4.travian.ru/dorf1.php',
-        'CENTER': 'http://ts4.travian.ru/dorf2.php',
+        'RESOURCES': '%s/dorf1.php' % HREF,
+        'CENTER': '%s/dorf2.php' % HREF,
+        'MESSAGES': '%s/messages.php' % HREF,
     }
 
     @staticmethod
@@ -294,6 +323,19 @@ class Player(object):
         data = Player.get_data(driver)
         nothing_to_do = True
         active_village = data['active_village']
+
+#        # TODO DELTE
+#        if data['corn'] < 10000 and active_village == 'dyens2':
+#            from subprocess import Popen
+#            command = 'mplayer'
+#            args = '/home/dyens/music/dont.mp3'
+#            Popen([command, args])
+
+        # чтение сообщений
+        messages = data['messages']
+        if messages > 0:
+            queue.add(('READ_MESSAGES', {}))
+            nothing_to_do = False
 
         # постройка шахт
         need_build_mine = Param.get_value('need_build_mine', active_village)
@@ -357,6 +399,17 @@ class Player(object):
                 if move['type'] == 'Нап':
                     message = 'Нападение: количество: %s, через: %s' % (move['number'], move['duration'])
                     send_message(message)
+                    server_time = data['server_time']
+                    coords = Param.get_value('coords', active_village)
+                    if server_time and coords:
+                        atack_time = server_time + move['duration']
+                        x, y = coords.split(',')
+                        x = int(x)
+                        y = int(y)
+                        help_body = '''
+{x},{y}
+{atack_time}'''.format(x=x, y=y, atack_time=atack_time.strftime('%Y:%m:%d:%H:%M:%S'))
+                        Player.write_message(driver, 'dyens', 'help', help_body)
                     Param.set_value('message_on_atack', 'False')
                     break
 
@@ -392,6 +445,25 @@ class Player(object):
             if farm_village is not None:
                 queue.add(('ATACK', {'atack_type': 'RAID', 'farm_village': farm_village}))
                 nothing_to_do = False
+
+
+        # пересылка ресурсов
+        need_trade_route = Param.get_value('need_trade_route', active_village)
+        if need_trade_route is None:
+            Param.set_value('need_trade_route', True, active_village)
+            need_trade_route = Param.get_value('need_trade_route', active_village)
+        if need_trade_route is True:
+            route = TradeRoute.get_trade_route(active_village)
+            if route:
+                wood = data['wood']
+                clay = data['clay']
+                rock = data['rock']
+                corn = data['corn']
+                if wood <= route.wood or clay <= route.clay or rock <= route.rock or corn <= route.corn:
+                    route.wait()
+                else:
+                    queue.add(('TRADE', {'route': route}))
+                    nothing_to_do = False
 
 
         work_times = [ANALYSE_DELTA, build_mine_time_delta,]
@@ -512,7 +584,7 @@ class Player(object):
                 if name not in friends_army:
                     friends_army.update({name: number + def_number - available_army})
                 else:
-                    friends_army[name] = friends_army[name] + number + def_numbre - available_army
+                    friends_army[name] = friends_army[name] + number + def_number - available_army
             else:
                 if wrong_atack is False:
                     input_f.send_keys('%s' % number)
@@ -540,9 +612,16 @@ class Player(object):
         farm_village.update_last_atack()
         time.sleep(3)
 
-        submit_button = driver.find_element_by_xpath('//button[@id="btn_ok" and @type="submit"]')
-        submit_button.click()
-        time.sleep(3)
+
+        try:
+            error = driver.find_element_by_xpath('//p[@class="error"]')
+            logging.warning('Wrong atack on village: %s' % error.text)
+            farm_village.delete()
+            logging.warning('Village deleted from farm list')
+        except NoSuchElementException:
+            submit_button = driver.find_element_by_xpath('//button[@id="btn_ok" and @type="submit"]')
+            submit_button.click()
+            time.sleep(3)
 
         return queue
 
@@ -585,7 +664,346 @@ class Player(object):
             logging.info('build mine.')
         except NoSuchElementException:
             #TODO get valid build after from driver
-            build_after = timdelta(minutes=5)
+            build_after = timedelta(minutes=5)
             queue.add_wait(build_after, [('BUILD_MINE', {'mine_href': href})])
 
         return queue
+
+
+    @staticmethod
+    def trade(driver, queue, **params):
+        route = params.get('route')
+        driver.get(Player.PAGES['CENTER'])
+        buildings = Player.get_center_data(driver)
+        market_href = None
+        for building in buildings:
+            if building['name'] == 'Рынок':
+                market_href = building['href']
+                break
+        if market_href is None:
+            logging.warning('Market not available in village')
+            return queue
+
+        market_tab_url_param = 't=5'
+        driver.get('%s&%s' %(market_href, market_tab_url_param))
+        time.sleep(2)
+
+
+        try:
+            wood_field = driver.find_element_by_xpath("//input[@id='r1']")
+            clay_field = driver.find_element_by_xpath("//input[@id='r2']")
+            rock_field = driver.find_element_by_xpath("//input[@id='r3']")
+            corn_field = driver.find_element_by_xpath("//input[@id='r4']")
+            x_field = driver.find_element_by_xpath("//input[@id='xCoordInput']")
+            y_field = driver.find_element_by_xpath("//input[@id='yCoordInput']")
+            button = driver.find_element_by_xpath("//button[@id='enabledButton']")
+        except NoSuchElementException:
+            logging.warning('Something going wrong in trade.')
+            route.wait()
+            return queue
+
+        if button.is_enabled() is False:
+            logging.warning('Something going wrong in trade.')
+            route.wait()
+            return queue
+
+
+        wood_field.send_keys(str(route.wood))
+        clay_field.send_keys(str(route.clay))
+        rock_field.send_keys(str(route.rock))
+        corn_field.send_keys(str(route.corn))
+        x_field.send_keys(str(route.x))
+        y_field.send_keys(str(route.y))
+
+        time.sleep(2)
+
+
+        div_error = driver.find_element_by_xpath("//div[@id='prepareError']")
+        if div_error.text:
+            logging.warning('Cant route trade. %s' % div_error.text)
+            route.wait()
+            return queue
+
+        button.click()
+        time.sleep(2)
+
+        try:
+            button = driver.find_element_by_xpath("//button[@id='enabledButton']")
+            travel_time = driver.find_element_by_xpath("//table[@id='target_validate']/tbody/tr[4]/td")
+        except NoSuchElementException:
+            logging.warning('Something going wrong in trade.')
+            route.wait()
+            return queue
+
+        h, m, s = travel_time.text.split(':')
+        h = Player._to_int(h)
+        m = Player._to_int(m)
+        s = Player._to_int(s)
+        travel_time = timedelta(hours=h, minutes=m, seconds=s)
+        button.click()
+        route.set_next(travel_time)
+        return queue
+
+    @staticmethod
+    def _parse_message_table(driver):
+        imgs = driver.find_elements_by_xpath("//table[@id='overview']/tbody/tr/td[@class='subject']/div/a/img")
+        hrefs_messsage = driver.find_elements_by_xpath("//table[@id='overview']/tbody/tr/td[@class='subject']/div/a")[1::2]
+        hrefs_from = driver.find_elements_by_xpath("//table[@id='overview']/tbody/tr/td[@class='send']/a")
+        dates = driver.find_elements_by_xpath("//table[@id='overview']/tbody/tr/td[@class='dat']")
+
+        statuses = [i.get_attribute('alt') for i in imgs]
+        travian_ids = []
+        headers = []
+        for i in hrefs_messsage:
+            h = i.get_attribute('href')
+            travian_id = Player._to_int(h.split('=')[-1])
+            header = i.text
+            travian_ids.append(travian_id)
+            headers.append(header)
+
+        from_ids = []
+        from_names = []
+        for i in hrefs_from:
+            h = i.get_attribute('href')
+            from_id = Player._to_int(h.split('=')[-1])
+            from_name = i.text
+            from_ids.append(from_id)
+            from_names.append(from_name)
+
+        now = datetime.now()
+        date_times = []
+        for i in dates:
+            text = i.text
+            if text.startswith('сегодня'):
+                year, month, day = now.year, now.month, now.day
+                hours, minutes = text.split(', ')[-1].split(':')
+                hours = Player._to_int(hours)
+                minutes = Player._to_int(minutes)
+                date_time = datetime(year, month, day, hours, minutes)
+            elif text.startswith('вчера'):
+                yesterday = now - timedelta(days=1)
+                year, month, day = yesterday.year, yesterday.month, yesterday.day
+                hours, minutes = text.split(', ')[-1].split(':')
+                hours = Player._to_int(hours)
+                minutes = Player._to_int(minutes)
+                date_time = datetime(year, month, day, hours, minutes)
+            else:
+                _date, _time = text.split(', ')
+                day, month, year = _date.split('.')
+                hours, minutes = _time.split(':')
+                day = Player._to_int(day)
+                month = Player._to_int(month)
+                year = Player._to_int(year)
+                hours = Player._to_int(hours)
+                minutes = Player._to_int(minutes)
+                date_time = datetime(year, month, day, hours, minutes)
+            date_times.append(date_time)
+
+        ziped_data = list(zip(statuses, travian_ids, headers, from_ids, from_names, date_times))
+        unread_messages = list(filter(lambda x: x[0]=='Не прочитано', ziped_data))
+        return unread_messages
+
+
+    @staticmethod
+    def read_messages(driver, queue, **params):
+        page_number = 1
+        messages_on_page = 10
+        messages = {}
+        while True:
+            driver.get('%s?t=0&order=DESC&page=%d' % (Player.PAGES['MESSAGES'], page_number))
+            time.sleep(2)
+            unread_messages = Player._parse_message_table(driver)
+            for i in unread_messages:
+                messages.update({
+                    i[1]: {
+                        'header': i[2],
+                        'from_id': i[3],
+                        'from_name': i[4],
+                        'date_time': i[5]
+                    }
+                })
+            if len(unread_messages) < messages_on_page:
+                break
+            page_number += 1
+
+        for travian_id, message_params in messages.items():
+            driver.get('%s?id=%d' % (Player.PAGES['MESSAGES'], travian_id))
+            time.sleep(2)
+
+            try:
+                body = driver.find_element_by_xpath("//div[@id='message']")
+            except NoSuchElementException:
+                logging.error('Cant read message mody id=%d' %travian_id)
+                return queue
+            body = body.text
+            message_params['body'] = body
+
+        if messages:
+            logging.info('%d New messages!' % len(messages))
+
+        for travian_id, message_params in messages.items():
+            Message.create_new(travian_id,
+                               message_params['from_id'],
+                               message_params['from_name'],
+                               message_params['header'],
+                               message_params['body'],
+                               message_params['date_time'],
+            )
+
+        need_def_messages = Message.get_need_def_messages()
+        if need_def_messages:
+            try:
+                server_time = driver.find_element_by_xpath("//div[@id='servertime']/span")
+            except NoSuchElementException:
+                logging.error('Cant define servertime')
+                return queue
+
+            h, m, s = server_time.text.split(':')
+            h = Player._to_int(h)
+            m = Player._to_int(m)
+            s = Player._to_int(s)
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+            now = datetime(year, month, day, h, m, s)
+
+            for need_def_message in need_def_messages:
+                if need_def_message.valid_def_message() is False:
+                    logging.warning('Someone in message travian_id = %s whant def.' % need_def_message.travian_id)
+                    continue
+
+                params = need_def_message.get_def_params()
+                if params is None:
+                    continue
+                    return queue
+                x, y, atack_time = params
+                atack_timedelta = atack_time - now
+                if atack_timedelta.total_seconds() < 0:
+                    logging.warning('Passed atack. Message travian_id = %s' % need_def_message.travian_id)
+                    need_def_message.readed()
+                    continue
+                helpers = get_help(x, y, atack_timedelta)
+                if 'Dictator' in helpers:
+                    helpers.remove('Dictator')
+
+                attention_message = '''
+##########################################
+            Внимание!
+Наша деревня [x|y]({x}|{y})[/x|y] атакована.
+Атака будет совершена в {atack_time}.
+
+Всем кто успевает.
+Необходимо выслать деф на данные координаты.
+
+p.s. Всем удачи!
+
+И не забывайте выслать кроп для своих войск.
+##########################################
+'''.format(x=x, y=y, atack_time = str(atack_time))
+
+                head = 'Нужен ДЕФ'
+                if helpers:
+                    # We can write only for 25 peoples.
+                    counter = 0
+                    to_helpers = []
+                    for helper in helpers:
+                        counter += 1
+                        to_helpers.append(helper)
+                        if counter == 24:
+                            Player.write_message(driver, to_helpers, head, attention_message)
+                            counter = 0
+                            to_helpers = []
+
+                    if to_helpers:
+                        Player.write_message(driver, to_helpers, head, attention_message)
+
+                head = 'RE: %s' % need_def_message.header
+                if helpers:
+                    attention_message = '''
+##########################################
+Игроки, которые могут оперативно
+прислать помощь оповещены.
+##########################################
+'''
+                    dictator_message = '''
+##########################################
+Наша деревня [x|y]({x}|{y})[/x|y] атакована.
+Атака будет совершена в {atack_time}.
+
+Игроки, которые могут помочь проинформированы:
+{helpers}
+##########################################
+'''.format(x=x, y=y, atack_time = str(atack_time), helpers='\n'.join(helpers))
+
+                else:
+                    attention_message = '''
+##########################################
+Нет игроков, готовых оперативно помочь.
+##########################################
+'''
+
+                    dictator_message = '''
+##########################################
+Наша деревня [x|y]({x}|{y})[/x|y] атакована.
+Атака будет совершена в {atack_time}.
+
+Нет игроков, готовых оперативно помочь.
+##########################################
+'''.format(x=x, y=y, atack_time = str(atack_time))
+
+                Player.write_message(driver, need_def_message.from_name, head, attention_message)
+                Player.write_message(driver, 'Dictator', 'На деревню (%s, %s) будет совершено нападение' % (x, y), dictator_message)
+                need_def_message.readed()
+        return queue
+
+
+    @staticmethod
+    def write_message(driver, to, head, body):
+        # NOW DONT WRITE MESSAGE
+        return
+        driver.get('%s?t=1' % (Player.PAGES['MESSAGES']))
+        time.sleep(2)
+        input_to = driver.find_element_by_xpath("//input[@name='an']")
+        input_head = driver.find_element_by_xpath("//input[@name='be']")
+        input_body = driver.find_element_by_xpath("//textarea[@name='message']")
+        button = driver.find_element_by_xpath("//button[@value='Отправить']")
+
+        if isinstance(to, list):
+            to = ';'.join(to)
+        input_to.send_keys(to)
+        input_head.send_keys(head)
+        input_body.send_keys(body)
+
+        time.sleep(2)
+        button.click()
+        time.sleep(2)
+
+
+    @staticmethod
+    def write_my_message(driver):
+        with open('message.txt', 'r') as f:
+            data_f = f.readlines()
+            toos = data_f[0].split(', ')
+            head = data_f[1]
+            body = '\n'.join(data_f[2:])
+            counter = 0
+            to = []
+            for tos in toos:
+                to.append(tos)
+                counter += 1
+                if counter == 24:
+                    Player.write_message(driver, to, head, body)
+                    to = []
+                    counter = 0
+            if to:
+                Player.write_message(driver, to, head, body)
+
+
+
+    @staticmethod
+    def react_on_clan_atack(x, y, atack_time):
+        pass
+
+
+
+
+

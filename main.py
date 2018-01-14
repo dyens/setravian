@@ -98,6 +98,7 @@ import stop
 import player
 import db
 import data
+import utils
 
 def get_jobs():
     return {
@@ -110,6 +111,8 @@ def get_jobs():
         'ANALYSE': player.Player.analyse,
         'BUILD_MINE': player.Player.build_mine,
         'ATACK': player.Player.atack,
+        'TRADE': player.Player.trade,
+        'READ_MESSAGES': player.Player.read_messages,
     }
 
 
@@ -132,6 +135,7 @@ def loop():
         global player
         global db
         global data
+        global utils
 
         controller.next()
         in_data = server.get()

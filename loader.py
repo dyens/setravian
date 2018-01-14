@@ -2,14 +2,15 @@ import logging
 from datetime import timedelta
 from config import LOGIN
 from config import PASSWORD
+from config import HREF
 import pickle
 import os
 import time
 
 class Loader(object):
 
-    MAIN_ADDRES = 'http://ts4.travian.ru/dorf1.php'
-    ERROR_ADDRES = 'http://ts4.travian.ru/dorf1.php/404'
+    MAIN_ADDRES = '%s/dorf1.php' % HREF
+    ERROR_ADDRES = '%s/dorf1.php/404' % HREF
 
     @staticmethod
     def _load_cookies(driver):
@@ -35,7 +36,6 @@ class Loader(object):
         form = driver.find_elements_by_xpath("//form[@name='login' and @method='POST']")
         if not form:
             #logging not needeed
-            queue.add(('BEGIN', {}))
             return queue
         if len(form) != 1:
             logging.error('Cant find login form.')
@@ -58,8 +58,8 @@ class Loader(object):
         driver.get(Loader.MAIN_ADDRES)
         form = driver.find_elements_by_xpath("//form[@name='login' and @method='POST']")
         if len(form) == 1:
-            queue.add(('BEGIN', {}))
             queue.add(('LOGIN', {}))
+            queue.add(('BEGIN', {}))
         elif len(form) == 0:
             queue.add(('BEGIN', {}))
         else:
